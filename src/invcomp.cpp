@@ -1,8 +1,7 @@
 #include <iostream>
+#include <stdint.h>
 #include <math.h>
 #include <time.h>
-
-#include <Eigen/Dense>
 
 #include "invcomp.hpp"
 #include "visionkit.hpp"
@@ -54,6 +53,7 @@ void inverseCompositionalAlign(cv::Mat& imgT, cv::Mat& imgI)
             J.copyTo(Jac_cache.row(x+y*rows));
             //compute H in here will contribute to larger error
             //H = H + J.t() * J;
+
         }
     }
     clock_t percompute_time = clock();
@@ -86,8 +86,8 @@ void inverseCompositionalAlign(cv::Mat& imgT, cv::Mat& imgI)
         mean_error = 0;
 
         cv::Mat IW;
-        cv::Mat Jres = cv::Mat::zeros(6,1, CV_32F);
-        cv::Mat dP = cv::Mat::zeros(6,1, CV_32F);
+        cv::Mat Jres = cv::Mat::zeros(6,1, CV_32FC1);
+        cv::Mat dP = cv::Mat::zeros(6,1, CV_32FC1);
 
         //! Get the Warp Image of I: I(W(x;p))
         warpAffine(A,imgI,IW);
@@ -99,7 +99,7 @@ void inverseCompositionalAlign(cv::Mat& imgT, cv::Mat& imgI)
             for(int x = 0; x < cols; ++x)
             {
                 //! Compute the error image: Res = I(W(x;p)) - T(x)
-                float res = pIW[x] - pT[x];
+                float res = pIW[x]*1.0 - pT[x];
                 //std::cout<<"res:"<<res<<std::endl;
                 mean_error += res*res;
 
@@ -124,14 +124,20 @@ void inverseCompositionalAlign(cv::Mat& imgT, cv::Mat& imgI)
         std::cout<<"dP"<<std::endl<<dP<<std::endl;
 
         //! Invert increment of Warp and update Warp: W(x,p) = W(x;p) * W(x;dp)^-1 
-        intAffine(dA,dP.at<float>(0,0)+1,dP.at<float>(0,1),dP.at<float>(0,2),dP.at<float>(0,3)+1,dP.at<float>(0,4),dP.at<float>(0,5));
+        float dA11 = dP.at<float>(0,0);
+        float dA12 = dP.at<float>(1,0);
+        float dA21 = dP.at<float>(2,0);
+        float dA22 = dP.at<float>(3,0);
+        float dtx = dP.at<float>(4,0);
+        float dty = dP.at<float>(5,0);
+        intAffine(dA,dA11+1,dA12,dA21,dA22+1,dtx,dty);
         A = A * dA.inv();
 
         std::cout<<"Ai:"<<A<<std::endl;
         std::cout<<"Time:"<<iter<<"  ";
         std::cout<<"Mean Error:"<<mean_error<<std::endl;
 
-        if(fabs(dP.at<float>(0,0)) < EPS && fabs(dP.at<float>(0,1)) < EPS && fabs(dP.at<float>(0,2)) < EPS && fabs(dP.at<float>(0,3)) < EPS && fabs(dP.at<float>(0,4)) < EPS && fabs(dP.at<float>(0,5)) < EPS)
+        if(fabs(dA11) < EPS && fabs(dA12) < EPS && fabs(dA21) < EPS && fabs(dA22) < EPS && fabs(dtx) < EPS && fabs(dty) < EPS)
         {break;}
     }
     clock_t finish_time = clock();

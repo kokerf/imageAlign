@@ -7,7 +7,7 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 
 set(CMAKE_BUILD_TYPE Release)
 #==============OpenCV Library=========================
-set(OpenCV_DIR ${PROJECT_SOURCE_DIR}/../../library/opencv-3.1.0/build/install_dir/share/OpenCV/)
+set(OpenCV_DIR "B://opencv-3.1.0//bulid//")
 
 find_package(OpenCV 3.1.0 EXACT REQUIRED)
 if(OpenCV_FOUND)

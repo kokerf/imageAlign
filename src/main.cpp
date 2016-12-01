@@ -4,22 +4,19 @@
 #include "visionkit.hpp"
 #include "invcomp.hpp"
 
-using namespace Eigen;
-
 int main(int argc, char const *argv[])
 {
-    /*cv::Mat origin,image,templet;
+    cv::Mat origin,image,templet;
 
     origin = cv::imread("../data/photo.jpg");
 
     cvtColor(origin, image, CV_BGR2GRAY);
-    //cv::imshow("image",image);
+
     std::cout<<"img:"<<image.size()<<std::endl;
 
     cv::Rect omega = cv::Rect(110, 100, 200, 150);
     image(omega).copyTo(templet);
     cv::imshow("templet",templet);
-
 
     cv::Mat A;
     intAffine(A,1.1,-0.7,0.1,1.1,0,0);
@@ -35,10 +32,9 @@ int main(int argc, char const *argv[])
     cv::imshow("I",I);
     cv::waitKey(0);
 
-
     inverseCompositionalAlign(templet,I);
 
-    cv::waitKey(0);*/
+    cv::waitKey(0);
 
     return 0;
 }

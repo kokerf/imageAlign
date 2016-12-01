@@ -18,18 +18,18 @@ void warpAffine(
     const cv::Mat& img_ref,
     cv::Mat& img_out)
 {
-    assert(img_ref.type()==CV_8U);
+    assert(img_ref.type()==CV_8UC1);
     assert(A.rows== 3 && A.cols==3);
 
     if(img_out.empty())
         img_out.create(img_ref.size(),CV_8U);
     else
-        assert(img_out.type==CV_8U && img_out.size()==img_ref.size());
+		assert(img_out.type()==CV_8UC1 && img_out.size()==img_ref.size());
     
     int refCols = img_ref.cols;
     int refRows = img_ref.rows;
-    float cx = img_ref.cols/2;
-    float cy = img_ref.rows/2;
+    float cx = img_ref.cols/2.0;
+    float cy = img_ref.rows/2.0;
     int destCols = img_out.cols;
     int destRows = img_out.rows;
 
@@ -64,7 +64,7 @@ void warpAffine(
 
 void gradient(const cv::Mat& I, cv::Mat& G, int dx, int dy)
 {
-    assert(I.type()==CV_8U);
+    assert(I.type()==CV_8UC1);
 
     // use Sobel gradient
     int8_t Sobel_dx[9] = {-1, 0, 1,-2, 0, 2,-1, 0, 1};
@@ -85,7 +85,7 @@ void gradient(const cv::Mat& I, cv::Mat& G, int dx, int dy)
     }
 
     // Get T with border
-    cv::Mat T = cv::Mat(I.rows+2,I.cols+2,CV_8U);
+    cv::Mat T = cv::Mat(I.rows+2,I.cols+2,CV_8UC1);
     I.copyTo(T.rowRange(1,T.rows-1).colRange(1,T.cols-1));
     I.row(0).copyTo(T.row(0).colRange(1,T.cols-1));
     I.col(0).copyTo(T.col(0).rowRange(1,T.rows-1));
@@ -96,31 +96,22 @@ void gradient(const cv::Mat& I, cv::Mat& G, int dx, int dy)
     I.row(I.rows-1).col(0).copyTo(T.row(T.rows-1).col(0));
     I.row(I.rows-1).col(I.cols-1).copyTo(T.row(T.rows-1).col(T.cols-1));
 
-    // Creat 
+    // Creat Gradient Image
     if(G.empty())
-        G = cv::Mat(I.size(),CV_32F);
+        G = cv::Mat(I.size(),CV_32FC1);
     else
-        assert(G.type==CV_32F && G.size()==I.size());
+		assert(G.type()==CV_32FC1 && G.size()==I.size());
 
     int strideI = I.step[0];
 
     int rows = I.rows;
     int cols = I.cols;
-    for(int y = 1; y < rows-1; ++y)
+    for(int y = 0; y < rows; ++y)
     {
         float* G_ptr = G.ptr<float>(y);
         uint8_t* I_ptr = (uint8_t*) I.ptr<uint8_t>(y);
-        for(int x = 1; x < cols-1; ++x)
+        for(int x = 0; x < cols; ++x)
         {
-            /*G_ptr[x] = I.at<uint8_t>(y-1,x-1) * sobel[0]
-                     + I.at<uint8_t>(y-1,x) * sobel[1]
-                     + I.at<uint8_t>(y-1,x+1) * sobel[2]
-                     + I.at<uint8_t>(y,x-1) * sobel[3]
-                     + I.at<uint8_t>(y,x) * sobel[4]
-                     + I.at<uint8_t>(y,x+1) * sobel[5]
-                     + I.at<uint8_t>(y+1,x-1) * sobel[6]
-                     + I.at<uint8_t>(y+1,x) * sobel[7]
-                     + I.at<uint8_t>(y+1,x+1) * sobel[8];*/
             G_ptr[x] = I_ptr[x-1-strideI] * sobel[0]
                      + I_ptr[x-strideI] * sobel[1]
                      + I_ptr[x+1-strideI] * sobel[2]
