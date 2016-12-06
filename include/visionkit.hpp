@@ -4,7 +4,8 @@
 #include <opencv2/opencv.hpp>
 
 void intAffine(cv::Mat& A, float a11, float a12, float a21, float a22, float tx, float ty);
-void warpAffine(const cv::Mat& A, const cv::Mat& img_ref, cv::Mat& img_out);
+void warpAffine(const cv::Mat& A, const cv::Mat& img_ref, cv::Mat& img_out, cv::Rect& omega);
+void warpAffine(const cv::Mat& A, const cv::Mat& img_ref, cv::Mat& img_out, cv::Point2d& O);
 
 float interpolateMat_8u(const cv::Mat& mat, float u, float v);
 
