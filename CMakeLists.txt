@@ -7,7 +7,7 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 
 set(CMAKE_BUILD_TYPE Release)
 #==============OpenCV Library=========================
-set(OpenCV_DIR "B://opencv-3.1.0//bulid//")
+set(OpenCV_DIR "B:/opencv/build")
 
 find_package(OpenCV 3.1.0 EXACT REQUIRED)
 if(OpenCV_FOUND)
@@ -20,7 +20,8 @@ endif()
 include_directories(${PROJECT_SOURCE_DIR}/include)
 add_executable(binfinal src/main.cpp
 						src/visionkit.cpp
-						src/invcomp.cpp)
+						src/invcomp.cpp
+						src/additive.cpp)
 
 #==============Link libraries to executable file======
 target_link_libraries(binfinal ${OpenCV_LIBS})

@@ -3,8 +3,8 @@
 #include <math.h>
 #include <time.h>
 
-#include "invcomp.hpp"
 #include "visionkit.hpp"
+#include "invcomp.hpp"
 
 //for warp affine, we evaluate jacobian
 // x' = (1+a11)*x+a12*y+tx;
@@ -13,24 +13,23 @@
 // 6 Dof
 // J = | x y 0 0 1 0|
 //     | 0 0 x y 0 1|
-void inverseCompositionalAlign(cv::Mat& imgT, cv::Mat& imgI)
+void inverseCompositionalImageAlign(cv::Mat& imgT, cv::Mat& imgI, cv::Rect omega)
 {
     const float EPS = 1E-5f; // Threshold value for termination criteria.
-    const int MAX_ITER = 200;  // Maximum iteration count.
+    const int MAX_ITER = 100;  // Maximum iteration count.
 
-    const int cols = imgT.cols;
-    const int rows = imgT.rows;
-    const int cx = imgT.cols/2;
-    const int cy = imgT.rows/2;
+    const int cols = omega.width;
+    const int rows = omega.height;
 
     /*
      *  Precomputation stage.
      */
 
     //! Evaluate gradient of T
-    cv::Mat gradDx,gradDy;
-    gradient(imgT,gradDx,1,0);
-    gradient(imgT,gradDy,0,1);
+	cv::Mat T = imgT(omega).clone();
+    cv::Mat gradTx,gradTy;
+    gradient(T,gradTx,1,0);
+    gradient(T,gradTy,0,1);
 
     cv::Mat jac;
     cv::Mat dxy;
@@ -46,7 +45,7 @@ void inverseCompositionalAlign(cv::Mat& imgT, cv::Mat& imgI)
 
             //! Calculate steepest descent image.
             jac =  (cv::Mat_<float>(2,6) << x, y, 0, 0, 1, 0, 0, 0, x, y, 0, 1);
-            dxy =  (cv::Mat_<float>(1,2) << gradDx.at<float>(y,x),gradDy.at<float>(y,x));
+            dxy =  (cv::Mat_<float>(1,2) << gradTx.at<float>(y,x),gradTy.at<float>(y,x));
             cv::Mat J = dxy*jac;
             //Jac_cache.row(x+y*rows) = dxy*jac;
             
@@ -87,15 +86,15 @@ void inverseCompositionalAlign(cv::Mat& imgT, cv::Mat& imgI)
 
         cv::Mat IW;
         cv::Mat Jres = cv::Mat::zeros(6,1, CV_32FC1);
-        cv::Mat dP = cv::Mat::zeros(6,1, CV_32FC1);
+        cv::Mat dp = cv::Mat::zeros(6,1, CV_32FC1);
 
         //! Get the Warp Image of I: I(W(x;p))
-        warpAffine(A,imgI,IW);
+        warpAffine(A, imgI, IW, omega);
 
         for(int y = 0; y < rows; ++y)
         {
             uint8_t* pIW = IW.ptr<uint8_t>(y);
-            uint8_t* pT = imgT.ptr<uint8_t>(y);
+            uint8_t* pT = T.ptr<uint8_t>(y);
             for(int x = 0; x < cols; ++x)
             {
                 //! Compute the error image: Res = I(W(x;p)) - T(x)
@@ -119,17 +118,17 @@ void inverseCompositionalAlign(cv::Mat& imgT, cv::Mat& imgI)
         }
         last_error = mean_error;
 
-        //! Compute Parameter Increment: dP = H^(-1) * Jres 
-        dP = Hinv * Jres;
-        std::cout<<"dP"<<std::endl<<dP<<std::endl;
+        //! Compute Parameter Increment: dp = H^(-1) * Jres 
+        dp = Hinv * Jres;
+        std::cout<<"dp"<<std::endl<<dp<<std::endl;
 
         //! Invert increment of Warp and update Warp: W(x,p) = W(x;p) * W(x;dp)^-1 
-        float dA11 = dP.at<float>(0,0);
-        float dA12 = dP.at<float>(1,0);
-        float dA21 = dP.at<float>(2,0);
-        float dA22 = dP.at<float>(3,0);
-        float dtx = dP.at<float>(4,0);
-        float dty = dP.at<float>(5,0);
+        float dA11 = dp.at<float>(0,0);
+        float dA12 = dp.at<float>(1,0);
+        float dA21 = dp.at<float>(2,0);
+        float dA22 = dp.at<float>(3,0);
+        float dtx = dp.at<float>(4,0);
+        float dty = dp.at<float>(5,0);
         intAffine(dA,dA11+1,dA12,dA21,dA22+1,dtx,dty);
         A = A * dA.inv();
 
