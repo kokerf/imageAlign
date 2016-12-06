@@ -26,7 +26,7 @@ void inverseCompositionalImageAlign(cv::Mat& imgT, cv::Mat& imgI, cv::Rect omega
      */
 
     //! Evaluate gradient of T
-	cv::Mat T = imgT(omega).clone();
+    cv::Mat T = imgT(omega).clone();
     cv::Mat gradTx,gradTy;
     gradient(T,gradTx,1,0);
     gradient(T,gradTy,0,1);
@@ -34,9 +34,9 @@ void inverseCompositionalImageAlign(cv::Mat& imgT, cv::Mat& imgI, cv::Rect omega
     cv::Mat jac;
     cv::Mat dxy;
     cv::Mat Jac_cache = cv::Mat::zeros(cols*rows, 6, CV_32F);
-    cv::Mat H;
+    cv::Mat H = cv::Mat::zeros(6, 6, CV_32FC1);
 
-    std::cout<<"Start Inverse Compositional Algorithm!"<<std::endl;
+    std::cout << std::endl << "Start Inverse Compositional Algorithm!" << std::endl;
     clock_t start_time = clock();
     for(int y = 0; y < rows; ++y)
     {
@@ -47,12 +47,8 @@ void inverseCompositionalImageAlign(cv::Mat& imgT, cv::Mat& imgI, cv::Rect omega
             jac =  (cv::Mat_<float>(2,6) << x, y, 0, 0, 1, 0, 0, 0, x, y, 0, 1);
             dxy =  (cv::Mat_<float>(1,2) << gradTx.at<float>(y,x),gradTy.at<float>(y,x));
             cv::Mat J = dxy*jac;
-            //Jac_cache.row(x+y*rows) = dxy*jac;
             
-            J.copyTo(Jac_cache.row(x+y*rows));
-            //compute H in here will contribute to larger error
-            //H = H + J.t() * J;
-
+            J.copyTo(Jac_cache.row(x+y*cols));
         }
     }
     clock_t percompute_time = clock();
@@ -60,11 +56,9 @@ void inverseCompositionalImageAlign(cv::Mat& imgT, cv::Mat& imgI, cv::Rect omega
 
     //! Calculate Hessian Matrix
     H = Jac_cache.t()*Jac_cache;
-    std::cout<<"H:"<<H<<std::endl;
 
     //! Get Invert Hessian Matrix
     cv::Mat Hinv = H.inv();
-    std::cout<<Hinv<<std::endl;
 
     /*
      *   Iteration stage.
@@ -102,25 +96,22 @@ void inverseCompositionalImageAlign(cv::Mat& imgT, cv::Mat& imgI, cv::Rect omega
                 //std::cout<<"res:"<<res<<std::endl;
                 mean_error += res*res;
 
-                cv::Mat JT = Jac_cache.row(x+y*rows).t();
+                cv::Mat JT = Jac_cache.row(x+y*cols).t();
 
                 Jres += JT * res;
-                //std::cout<<"Jac_cache:"<<std::endl<<Jac_cache.row(820)<<std::endl;
-                //std::cout<<"Jres "<<x+y*rows<<":"<<std::endl<<Jres<<std::endl;
             }
         }
 
         mean_error /= rows*cols;
 
-        if(mean_error > last_error)
+        /*if(mean_error > last_error)
         {
             A = A * dA;
-        }
+        }*/
         last_error = mean_error;
 
         //! Compute Parameter Increment: dp = H^(-1) * Jres 
         dp = Hinv * Jres;
-        std::cout<<"dp"<<std::endl<<dp<<std::endl;
 
         //! Invert increment of Warp and update Warp: W(x,p) = W(x;p) * W(x;dp)^-1 
         float dA11 = dp.at<float>(0,0);
@@ -132,9 +123,9 @@ void inverseCompositionalImageAlign(cv::Mat& imgT, cv::Mat& imgI, cv::Rect omega
         intAffine(dA,dA11+1,dA12,dA21,dA22+1,dtx,dty);
         A = A * dA.inv();
 
-        std::cout<<"Ai:"<<A<<std::endl;
+        /*std::cout<<"Ai:"<<A<<std::endl;
         std::cout<<"Time:"<<iter<<"  ";
-        std::cout<<"Mean Error:"<<mean_error<<std::endl;
+        std::cout<<"Mean Error:"<<mean_error<<std::endl;*/
 
         if(fabs(dA11) < EPS && fabs(dA12) < EPS && fabs(dA21) < EPS && fabs(dA22) < EPS && fabs(dtx) < EPS && fabs(dty) < EPS)
         {break;}
@@ -143,10 +134,12 @@ void inverseCompositionalImageAlign(cv::Mat& imgT, cv::Mat& imgI, cv::Rect omega
     double total_time = (double)(finish_time-start_time)/CLOCKS_PER_SEC;
 
     //! Print summary.
-    std::cout<<"==============================================="<<std::endl;
-    std::cout<<"Algorithm: inverse compositional"<<std::endl;
-    std::cout<<"A:"<<std::endl<<A.inv()<<std::endl;
-    std::cout<<"Percompute Time:"<<per_time<<std::endl;
-    std::cout<<"Total Time:"<<total_time<<std::endl;
-    std::cout<<"==============================================="<<std::endl;
+    std::cout << "===============================================" << std::endl;
+    std::cout << "Algorithm: inverse compositional" << std::endl;
+    std::cout << "A:" << std::endl << A << std::endl;
+    std::cout << "Mean Error:" << mean_error << std::endl;
+    std::cout << "Iteration:" << iter << std::endl;
+    std::cout << "Percompute Time:" << per_time << std::endl;
+    std::cout << "Total Time:" << total_time << std::endl;
+    std::cout << "===============================================" << std::endl;
 }

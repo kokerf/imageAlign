@@ -22,25 +22,30 @@ int main(int argc, char const *argv[])
     std::cout<<"img:"<<origin.size()<<std::endl;
 
     //! Set Affine Model
-	cv::Rect omega = cv::Rect(110, 100, 200, 150);
-	intAffine(A, 1.0, 0.3, 0, 1.0, 0, 0);
+    cv::Rect omega = cv::Rect(110, 100, 200, 150);
+    intAffine(A, 1.2, 0.3, 0, 1.0, 0, 0);
     //intAffine(A,1.2,-0.2,-0.1,1.2,0,0);
-	cv::Point2d O(omega.x + 0.5*omega.width, omega.y + 0.5*omega.height);
+    cv::Point2d O(omega.x + 0.5*omega.width, omega.y + 0.5*omega.height);
     warpAffine(A,image,imgAff,O);
-    std::cout<<"A:"<<A<<std::endl;
 
     //! Get image I form gary image, T from imgAff
     //cv::Rect omega = cv::Rect(110, 100, 200, 150);
-    image.copyTo(T);
-    imgAff.copyTo(I);
+    image.copyTo(I);
+    imgAff.copyTo(T);
 
     //! Show templet & image
     cv::imshow("templet",T);
     cv::imshow("image",I);
     cv::waitKey(0);
 
+    //! The Affine Matrix
+    std::cout << std::endl << "A:" << std::endl << A << std::endl;
+
+    //! Forward Additive Image Alignment
+    additiveImageAlign(T, I, omega);
+
     //! Inverse Compositional Image Alignment 
-	additiveImageAlign(T,I,omega);
+    inverseCompositionalImageAlign(T,I,omega);
 
     cv::waitKey(0);
 

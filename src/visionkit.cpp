@@ -17,7 +17,7 @@ void warpAffine(
     const cv::Mat& A,
     const cv::Mat& img_ref,
     cv::Mat& img_out,
-  cv::Rect& omega)
+    cv::Rect& omega)
 {
     assert(img_ref.type()==CV_8UC1);
     assert(A.rows== 3 && A.cols==3);
@@ -26,7 +26,7 @@ void warpAffine(
     {
       img_out.release();
     }
-	img_out = cv::Mat::zeros(omega.height, omega.width, CV_8UC1);
+    img_out = cv::Mat::zeros(omega.height, omega.width, CV_8UC1);
     
     
     const int refCols = img_ref.cols;
@@ -56,9 +56,9 @@ void warpAffine(
             u += cx;
             v += cy;
 
-			int u1, v1;
-			u1 = u + omega.x;
-		    v1 = v + omega.y;
+            int u1, v1;
+            u1 = u + omega.x;
+            v1 = v + omega.y;
 
             if(u1 < 0 || v1 < 0 || u1 > refCols -1 || v1 > refRows-1)
                 continue;
@@ -72,19 +72,19 @@ void warpAffine(
 }
 
 void warpAffine(
-  const cv::Mat& A,
-  const cv::Mat& img_ref,
-  cv::Mat& img_out,
-  cv::Point2d & O)
+    const cv::Mat& A,
+    const cv::Mat& img_ref,
+    cv::Mat& img_out,
+    cv::Point2d & O)
 {
     assert(img_ref.type() == CV_8UC1);
     assert(A.rows == 3 && A.cols == 3);
 
     if (!img_out.empty())
     {
-		img_out.release();
+        img_out.release();
     }
-	img_out = cv::Mat::zeros(img_ref.size(), CV_8UC1);
+    img_out = cv::Mat::zeros(img_ref.size(), CV_8UC1);
 
 
     const int refCols = img_ref.cols;
@@ -200,19 +200,19 @@ void gradient(const cv::Mat& I, cv::Mat& G, int dx, int dy)
 
 float interpolateMat_8u(const cv::Mat& mat, float u, float v)
 {
-  assert(mat.type()==CV_8UC1);
-  int x = floor(u);
-  int y = floor(v);
-  float subpix_x = u-x;
-  float subpix_y = v-y;
+    assert(mat.type()==CV_8UC1);
+    int x = floor(u);
+    int y = floor(v);
+    float subpix_x = u-x;
+    float subpix_y = v-y;
 
-  float w00 = (1.0f-subpix_x)*(1.0f-subpix_y);
-  float w01 = (1.0f-subpix_x)*subpix_y;
-  float w10 = subpix_x*(1.0f-subpix_y);
-  float w11 = 1.0f - w00 - w01 - w10;
+    float w00 = (1.0f-subpix_x)*(1.0f-subpix_y);
+    float w01 = (1.0f-subpix_x)*subpix_y;
+    float w10 = subpix_x*(1.0f-subpix_y);
+    float w11 = 1.0f - w00 - w01 - w10;
 
-  // addr(Mij) = M.data + M.step[0]*i + M.step[1]*j
-  const int stride = mat.step.p[0];
-  unsigned char* ptr = mat.data + y*stride + x;
-  return w00*ptr[0] + w01*ptr[stride] + w10*ptr[1] + w11*ptr[stride+1];
+    // addr(Mij) = M.data + M.step[0]*i + M.step[1]*j
+    const int stride = mat.step.p[0];
+    unsigned char* ptr = mat.data + y*stride + x;
+    return w00*ptr[0] + w01*ptr[stride] + w10*ptr[1] + w11*ptr[stride+1];
 }
