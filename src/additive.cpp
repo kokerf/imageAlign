@@ -6,7 +6,7 @@
 #include "visionkit.hpp"
 #include "additive.hpp"
 
-void additiveImageAlign(cv::Mat& imgT, cv::Mat& imgI, cv::Rect& omega)
+void forwardAdditiveImageAlign(cv::Mat& imgT, cv::Mat& imgI, cv::Rect& omega)
 {
     const float EPS = 1E-5f; // Threshold value for termination criteria.
     const int MAX_ITER = 100;  // Maximum iteration count.
@@ -14,35 +14,49 @@ void additiveImageAlign(cv::Mat& imgT, cv::Mat& imgI, cv::Rect& omega)
     const int cols = omega.width;
     const int rows = omega.height;
 
+	std::cout << std::endl << "Start Forward Additive Algorithm!" << std::endl;
+
+	clock_t start_time = clock();
+
+	/*
+	*  Precomputation stage.
+	*/
+
     cv::Mat T = imgT(omega).clone();
-    
-    cv::Mat dp = cv::Mat::zeros(6,1, CV_32FC1);
-    float mean_error = 0, last_error = 999999;
+	//cv::Mat I = imgI(omega).clone();
+	cv::Mat gradIx, gradIy;
+	//! Get gradient ▽I
+	gradient(imgI, gradIx, 1, 0);
+	gradient(imgI, gradIy, 0, 1);
+
+	/*
+	*   Iteration stage.
+	*/
 
     //! Evaluate Model's Parameter in Warp: p
     cv::Mat A = (cv::Mat_<float>(3,3) << 1, 0, 0, 0, 1, 0, 0, 0, 1);
-    cv::Mat dA;
 
-    std::cout << std::endl << "Start Forward Additive Algorithm!" << std::endl;
-    clock_t start_time = clock();
-
+	float mean_error = 0, last_error = 999999;
     int iter = 0;
+
     while(iter < MAX_ITER)
     {
         iter++;
 
+		cv::Mat IW;
+		cv::Mat gradIx_W, gradIy_W;
+		cv::Mat H = cv::Mat::zeros(6, 6, CV_32FC1);
+		cv::Mat Jres = cv::Mat::zeros(6, 1, CV_32FC1);
+		cv::Mat dp = cv::Mat::zeros(6, 1, CV_32FC1);
+		cv::Mat dA;
+
         //! Step1: Get the Warp Image of I: I(W(x;p))
-        cv::Mat IW;
         warpAffine(imgI, IW, A, omega);
 
         //! Step2: Warp the gradient ▽I with W(x;p)
-        cv::Mat gradIx;
-        cv::Mat gradIy;
-        gradient(IW, gradIx, 1, 0);
-        gradient(IW, gradIy, 0, 1);
+		warpAffine_float(gradIx, gradIx_W, A, omega);
+		warpAffine_float(gradIy, gradIy_W, A, omega);
 
-        cv::Mat H = cv::Mat::zeros(6, 6, CV_32FC1);
-        cv::Mat Jres = cv::Mat::zeros(6, 1, CV_32FC1);
         for(int y = 0; y < rows; ++y)
         {
             uint8_t* pIW = IW.ptr<uint8_t>(y);
@@ -53,7 +67,7 @@ void additiveImageAlign(cv::Mat& imgT, cv::Mat& imgI, cv::Rect& omega)
                 cv::Mat jac = (cv::Mat_<float>(2, 6) << x, y, 0, 0, 1, 0, 0, 0, x, y, 0, 1);
 
                 //! Step4: Calculate steepest descent image ▽I*∂W/∂p
-                cv::Mat dxy = (cv::Mat_<float>(1, 2) << gradIx.at<float>(y, x), gradIy.at<float>(y, x));
+                cv::Mat dxy = (cv::Mat_<float>(1, 2) << gradIx_W.at<float>(y, x), gradIy_W.at<float>(y, x));
                 cv::Mat J = dxy*jac;
 
                 //! Step5: Calculate Hessian Matrix H = ∑x[▽I*∂W/∂p]^T*[▽I*∂W/∂p]

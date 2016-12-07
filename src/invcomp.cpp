@@ -21,6 +21,10 @@ void inverseCompositionalImageAlign(cv::Mat& imgT, cv::Mat& imgI, cv::Rect omega
     const int cols = omega.width;
     const int rows = omega.height;
 
+	std::cout << std::endl << "Start Inverse Compositional Algorithm!" << std::endl;
+
+	clock_t start_time = clock();
+
     /*
      *  Precomputation stage.
      */
@@ -36,8 +40,6 @@ void inverseCompositionalImageAlign(cv::Mat& imgT, cv::Mat& imgI, cv::Rect omega
     cv::Mat Jac_cache = cv::Mat::zeros(cols*rows, 6, CV_32F);
     cv::Mat H = cv::Mat::zeros(6, 6, CV_32FC1);
 
-    std::cout << std::endl << "Start Inverse Compositional Algorithm!" << std::endl;
-    clock_t start_time = clock();
     for(int y = 0; y < rows; ++y)
     {
         for(int x = 0; x < cols; ++x)
@@ -72,7 +74,6 @@ void inverseCompositionalImageAlign(cv::Mat& imgT, cv::Mat& imgI, cv::Rect omega
     float mean_error = 0;
     float last_error = 999999;
 
-    cv::Mat dA;
     while(iter < MAX_ITER)
     {
         iter++;
@@ -82,6 +83,7 @@ void inverseCompositionalImageAlign(cv::Mat& imgT, cv::Mat& imgI, cv::Rect omega
         cv::Mat IW;
         cv::Mat Jres = cv::Mat::zeros(6,1, CV_32FC1);
         cv::Mat dp = cv::Mat::zeros(6,1, CV_32FC1);
+		cv::Mat dA;
 
         //! Step5: Get the Warp Image of I: I(W(x;p))
         warpAffine(imgI, IW, A, omega);

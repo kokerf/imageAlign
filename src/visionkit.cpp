@@ -56,7 +56,7 @@ void warpAffine(
             u += cx;
             v += cy;
 
-            int u1, v1;
+            float u1, v1;
             u1 = u + omega.x;
             v1 = v + omega.y;
 
@@ -112,7 +112,7 @@ void warpAffine(
             u += cx;
             v += cy;
 
-            int u1, v1;
+            float u1, v1;
             u1 = u;
             v1 = v;
 
@@ -125,6 +125,64 @@ void warpAffine(
         }
     }
 
+}
+
+void warpAffine_float(
+	const cv::Mat& img_ref,
+	cv::Mat& img_out,
+	const cv::Mat& A,
+	cv::Rect& omega,
+	cv::Point2d O,
+	bool flag)
+{
+	assert(img_ref.type() == CV_32FC1);
+	assert(A.rows == 3 && A.cols == 3);
+
+	if (!img_out.empty())
+	{
+		img_out.release();
+	}
+	img_out = cv::Mat::zeros(omega.height, omega.width, CV_32FC1);
+
+	const int refCols = img_ref.cols;
+	const int refRows = img_ref.rows;
+	const int destCols = img_out.cols;
+	const int destRows = img_out.rows;
+	const float cx = (!flag) ? (omega.width*0.5) : (O.x);
+	const float cy = (!flag) ? (omega.height*0.5) : (O.y);
+
+	float a11 = A.at<float>(0, 0);
+	float a12 = A.at<float>(0, 1);
+	float a21 = A.at<float>(1, 0);
+	float a22 = A.at<float>(1, 1);
+	float tx = A.at<float>(0, 2);
+	float ty = A.at<float>(1, 2);
+
+	//float* im_ptr = (float*)img_out.data;
+	float* im_ptr = img_out.ptr<float>(0);
+	//! (u,v) is warp from (x,y) in img_out
+	int u, v;
+	for (int y = 0; y < destRows; ++y)
+	{
+		for (int x = 0; x < destCols; ++x, ++im_ptr)
+		{
+			u = a11 * (x - cx) + a12 * (y - cy) + tx;
+			v = a21 * (x - cx) + a22 * (y - cy) + ty;
+			u += cx;
+			v += cy;
+
+			float u1, v1;
+			u1 = u + omega.x;
+			v1 = v + omega.y;
+
+			if (u1 < 0 || v1 < 0 || u1 > refCols - 1 || v1 > refRows - 1)
+				continue;
+			else
+			{
+				*im_ptr = interpolateMat_32f(img_ref, u1, v1);
+			}
+		}
+	}
 }
 
 void gradient(const cv::Mat& I, cv::Mat& G, int dx, int dy)
@@ -145,7 +203,7 @@ void gradient(const cv::Mat& I, cv::Mat& G, int dx, int dy)
     }
     else
     {
-        std::cout<<"!!!Error in gradient(): dx = "<<dx<<" dy = "<<dy<<std::endl;
+        std::cout << "!!!Error in gradient(): dx = " << dx << " dy = " << dy << std::endl;
         return;
     }
 
@@ -165,13 +223,13 @@ void gradient(const cv::Mat& I, cv::Mat& G, int dx, int dy)
     if(G.empty())
         G = cv::Mat(I.size(),CV_32FC1);
     else
-    assert(G.type()==CV_32FC1 && G.size()==I.size());
+		assert(G.type()==CV_32FC1 && G.size()==I.size());
 
     int strideT = T.step[0];
 
     int rows = I.rows;
     int cols = I.cols;
-    uint8_t u, v;
+    int u, v;
     for(int y = 0; y < rows; ++y)
     {
         v = y + 1;
@@ -195,7 +253,9 @@ void gradient(const cv::Mat& I, cv::Mat& G, int dx, int dy)
     }
 }
 
-
+//! https://github.com/uzh-rpg/rpg_vikit/blob/master/vikit_common/include/vikit/vision.h
+//! Return value between 0 and 255
+//! WARNING This function does not check whether the x/y is within the border
 float interpolateMat_8u(const cv::Mat& mat, float u, float v)
 {
     assert(mat.type()==CV_8UC1);
@@ -213,4 +273,25 @@ float interpolateMat_8u(const cv::Mat& mat, float u, float v)
     const int stride = mat.step.p[0];
     unsigned char* ptr = mat.data + y*stride + x;
     return w00*ptr[0] + w01*ptr[stride] + w10*ptr[1] + w11*ptr[stride+1];
+}
+
+//! https://github.com/uzh-rpg/rpg_vikit/blob/master/vikit_common/include/vikit/vision.h
+//! WARNING This function does not check whether the x/y is within the border
+float interpolateMat_32f(const cv::Mat& mat, float u, float v)
+{
+	assert(mat.type() == CV_32F);
+	float x = floor(u);
+	float y = floor(v);
+	float subpix_x = u - x;
+	float subpix_y = v - y;
+	float wx0 = 1.0 - subpix_x;
+	float wx1 = subpix_x;
+	float wy0 = 1.0 - subpix_y;
+	float wy1 = subpix_y;
+
+	float val00 = mat.at<float>(y, x);
+	float val10 = mat.at<float>(y, x + 1);
+	float val01 = mat.at<float>(y + 1, x);
+	float val11 = mat.at<float>(y + 1, x + 1);
+	return (wx0*wy0)*val00 + (wx1*wy0)*val10 + (wx0*wy1)*val01 + (wx1*wy1)*val11;
 }

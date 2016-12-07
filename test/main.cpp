@@ -42,7 +42,7 @@ int main(int argc, char const *argv[])
     std::cout << std::endl << "A:" << std::endl << A << std::endl;
 
     //! Forward Additive Image Alignment
-    additiveImageAlign(T, I, omega);
+    forwardAdditiveImageAlign(T, I, omega);
 
     //! Inverse Compositional Image Alignment 
     inverseCompositionalImageAlign(T, I, omega);
