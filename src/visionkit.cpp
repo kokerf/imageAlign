@@ -12,29 +12,30 @@ void intAffine(cv::Mat& A, float a11, float a12, float a21, float a22, float tx,
     A = (cv::Mat_<float>(3,3) << a11, a12, tx, a21, a22, ty, 0, 0, 1);
 }
 
-// the origin of axis is on the centre of the picture
+// the origin of axis of the Affine is on the centre of the picture
 void warpAffine(
-    const cv::Mat& A,
     const cv::Mat& img_ref,
     cv::Mat& img_out,
-    cv::Rect& omega)
+    const cv::Mat& A,
+    cv::Rect& omega,
+	cv::Point2d O,
+	bool flag)
 {
     assert(img_ref.type()==CV_8UC1);
     assert(A.rows== 3 && A.cols==3);
 
-    if (!img_out.empty())
+    if(!img_out.empty())
     {
-      img_out.release();
+		img_out.release();
     }
     img_out = cv::Mat::zeros(omega.height, omega.width, CV_8UC1);
     
-    
     const int refCols = img_ref.cols;
     const int refRows = img_ref.rows;
-    const float cx = omega.width*0.5;
-    const float cy = omega.height*0.5;
     const int destCols = img_out.cols;
     const int destRows = img_out.rows;
+	const float cx = (!flag) ? (omega.width*0.5) : (O.x);
+	const float cy = (!flag) ? (omega.height*0.5) : (O.y);
 
     float a11 = A.at<float>(0,0);
     float a12 = A.at<float>(0,1);
@@ -42,7 +43,6 @@ void warpAffine(
     float a22 = A.at<float>(1,1);
     float tx = A.at<float>(0,2);
     float ty = A.at<float>(1,2);
-    //std::cout<<"A:"<<a11<<","<<a12<<","<<a21<<","<<a22<<","<<tx<<","<<ty<<std::endl;
 
     uint8_t* im_ptr = img_out.data;
     //! (u,v) is warp from (x,y) in img_out
@@ -72,10 +72,10 @@ void warpAffine(
 }
 
 void warpAffine(
-    const cv::Mat& A,
     const cv::Mat& img_ref,
     cv::Mat& img_out,
-    cv::Point2d & O)
+    const cv::Mat& A,
+    cv::Point2d O)
 {
     assert(img_ref.type() == CV_8UC1);
     assert(A.rows == 3 && A.cols == 3);
@@ -85,7 +85,6 @@ void warpAffine(
         img_out.release();
     }
     img_out = cv::Mat::zeros(img_ref.size(), CV_8UC1);
-
 
     const int refCols = img_ref.cols;
     const int refRows = img_ref.rows;
@@ -100,7 +99,6 @@ void warpAffine(
     float a22 = A.at<float>(1, 1);
     float tx = A.at<float>(0, 2);
     float ty = A.at<float>(1, 2);
-    //std::cout<<"A:"<<a11<<","<<a12<<","<<a21<<","<<a22<<","<<tx<<","<<ty<<std::endl;
 
     uint8_t* im_ptr = img_out.data;
     //! (u,v) is in img_out
@@ -133,7 +131,7 @@ void gradient(const cv::Mat& I, cv::Mat& G, int dx, int dy)
 {
     assert(I.type()==CV_8UC1);
 
-    // use Sobel gradient
+    //! use Sobel gradient
     int8_t Sobel_dx[9] = {-1, 0, 1,-2, 0, 2,-1, 0, 1};
     int8_t Sobel_dy[9] = {-1,-2,-1, 0, 0, 0, 1, 2, 1};
     int8_t* sobel;
@@ -151,7 +149,7 @@ void gradient(const cv::Mat& I, cv::Mat& G, int dx, int dy)
         return;
     }
 
-    // Get T with border
+    //! Get T with border
     cv::Mat T = cv::Mat(I.rows+2,I.cols+2,CV_8UC1);
     I.copyTo(T.rowRange(1,T.rows-1).colRange(1,T.cols-1));
     I.row(0).copyTo(T.row(0).colRange(1,T.cols-1));
@@ -163,7 +161,7 @@ void gradient(const cv::Mat& I, cv::Mat& G, int dx, int dy)
     I.row(I.rows-1).col(0).copyTo(T.row(T.rows-1).col(0));
     I.row(I.rows-1).col(I.cols-1).copyTo(T.row(T.rows-1).col(T.cols-1));
 
-    // Creat Gradient Image
+    //! Creat Gradient Image
     if(G.empty())
         G = cv::Mat(I.size(),CV_32FC1);
     else
@@ -211,7 +209,7 @@ float interpolateMat_8u(const cv::Mat& mat, float u, float v)
     float w10 = subpix_x*(1.0f-subpix_y);
     float w11 = 1.0f - w00 - w01 - w10;
 
-    // addr(Mij) = M.data + M.step[0]*i + M.step[1]*j
+    //! addr(Mij) = M.data + M.step[0]*i + M.step[1]*j
     const int stride = mat.step.p[0];
     unsigned char* ptr = mat.data + y*stride + x;
     return w00*ptr[0] + w01*ptr[stride] + w10*ptr[1] + w11*ptr[stride+1];

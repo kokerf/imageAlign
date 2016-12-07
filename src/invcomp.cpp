@@ -1,4 +1,4 @@
-#include <iostream>
+﻿#include <iostream>
 #include <stdint.h>
 #include <math.h>
 #include <time.h>
@@ -25,7 +25,7 @@ void inverseCompositionalImageAlign(cv::Mat& imgT, cv::Mat& imgI, cv::Rect omega
      *  Precomputation stage.
      */
 
-    //! Evaluate gradient of T
+    //! Step1: Evaluate the gradient of the templet
     cv::Mat T = imgT(omega).clone();
     cv::Mat gradTx,gradTy;
     gradient(T,gradTx,1,0);
@@ -42,9 +42,10 @@ void inverseCompositionalImageAlign(cv::Mat& imgT, cv::Mat& imgI, cv::Rect omega
     {
         for(int x = 0; x < cols; ++x)
         {
-
-            //! Calculate steepest descent image.
+			//! Step2: Evaluate the Jacobin at(x; p)
             jac =  (cv::Mat_<float>(2,6) << x, y, 0, 0, 1, 0, 0, 0, x, y, 0, 1);
+
+			//! Step3: Calculate steepest descent image
             dxy =  (cv::Mat_<float>(1,2) << gradTx.at<float>(y,x),gradTy.at<float>(y,x));
             cv::Mat J = dxy*jac;
             
@@ -54,7 +55,7 @@ void inverseCompositionalImageAlign(cv::Mat& imgT, cv::Mat& imgI, cv::Rect omega
     clock_t percompute_time = clock();
     double per_time = (double)(percompute_time-start_time)/CLOCKS_PER_SEC;
 
-    //! Calculate Hessian Matrix
+    //! Step4: Calculate Hessian Matrix
     H = Jac_cache.t()*Jac_cache;
 
     //! Get Invert Hessian Matrix
@@ -82,8 +83,8 @@ void inverseCompositionalImageAlign(cv::Mat& imgT, cv::Mat& imgI, cv::Rect omega
         cv::Mat Jres = cv::Mat::zeros(6,1, CV_32FC1);
         cv::Mat dp = cv::Mat::zeros(6,1, CV_32FC1);
 
-        //! Get the Warp Image of I: I(W(x;p))
-        warpAffine(A, imgI, IW, omega);
+        //! Step5: Get the Warp Image of I: I(W(x;p))
+        warpAffine(imgI, IW, A, omega);
 
         for(int y = 0; y < rows; ++y)
         {
@@ -91,13 +92,13 @@ void inverseCompositionalImageAlign(cv::Mat& imgT, cv::Mat& imgI, cv::Rect omega
             uint8_t* pT = T.ptr<uint8_t>(y);
             for(int x = 0; x < cols; ++x)
             {
-                //! Compute the error image: Res = I(W(x;p)) - T(x)
+                //! Step6: Compute the error image: Res = I(W(x;p)) - T(x)
                 float res = pIW[x]*1.0 - pT[x];
-                //std::cout<<"res:"<<res<<std::endl;
+
                 mean_error += res*res;
 
+				//! Step7: Compute Jres
                 cv::Mat JT = Jac_cache.row(x+y*cols).t();
-
                 Jres += JT * res;
             }
         }
@@ -110,10 +111,10 @@ void inverseCompositionalImageAlign(cv::Mat& imgT, cv::Mat& imgI, cv::Rect omega
         }*/
         last_error = mean_error;
 
-        //! Compute Parameter Increment: dp = H^(-1) * Jres 
+        //! Step8: Compute Parameter Increment: dp = H^(-1) * Jres 
         dp = Hinv * Jres;
 
-        //! Invert increment of Warp and update Warp: W(x,p) = W(x;p) * W(x;dp)^-1 
+        //! Step9: Invert increment of Warp and update Warp: W(x,p) = W(x;p) * W(x;dp)^-1 
         float dA11 = dp.at<float>(0,0);
         float dA12 = dp.at<float>(1,0);
         float dA21 = dp.at<float>(2,0);
@@ -123,9 +124,11 @@ void inverseCompositionalImageAlign(cv::Mat& imgT, cv::Mat& imgI, cv::Rect omega
         intAffine(dA,dA11+1,dA12,dA21,dA22+1,dtx,dty);
         A = A * dA.inv();
 
-        /*std::cout<<"Ai:"<<A<<std::endl;
-        std::cout<<"Time:"<<iter<<"  ";
-        std::cout<<"Mean Error:"<<mean_error<<std::endl;*/
+#ifdef  DEBUG_INF_OUT
+		std::cout << "A:" << A << std::endl;
+		std::cout << "Iter:" << iter << "  ";
+		std::cout << "Mean Error:" << mean_error << std::endl;
+#endif // DEBUG_INF_OUT
 
         if(fabs(dA11) < EPS && fabs(dA12) < EPS && fabs(dA21) < EPS && fabs(dA22) < EPS && fabs(dtx) < EPS && fabs(dty) < EPS)
         {break;}

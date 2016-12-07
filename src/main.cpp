@@ -26,7 +26,7 @@ int main(int argc, char const *argv[])
     intAffine(A, 1.2, 0.3, 0, 1.0, 0, 0);
     //intAffine(A,1.2,-0.2,-0.1,1.2,0,0);
     cv::Point2d O(omega.x + 0.5*omega.width, omega.y + 0.5*omega.height);
-    warpAffine(A,image,imgAff,O);
+    warpAffine(image, imgAff, A, O);
 
     //! Get image I form gary image, T from imgAff
     //cv::Rect omega = cv::Rect(110, 100, 200, 150);

@@ -11,14 +11,10 @@ void additiveImageAlign(cv::Mat& imgT, cv::Mat& imgI, cv::Rect& omega)
     const float EPS = 1E-5f; // Threshold value for termination criteria.
     const int MAX_ITER = 100;  // Maximum iteration count.
 
-    const int cols = omega.width;//imgT.cols;
-    const int rows = omega.height;//imgT.rows;
-    //const int cx = imgT.cols/2;
-    //const int cy = imgT.rows/2;
+    const int cols = omega.width;
+    const int rows = omega.height;
 
     cv::Mat T = imgT(omega).clone();
-
-    //cv::Mat Err = cv::Mat::zeros(imgI.size(),CV_32FC1);
     
     cv::Mat dp = cv::Mat::zeros(6,1, CV_32FC1);
     float mean_error = 0, last_error = 999999;
@@ -37,7 +33,7 @@ void additiveImageAlign(cv::Mat& imgT, cv::Mat& imgI, cv::Rect& omega)
 
         //! Step1: Get the Warp Image of I: I(W(x;p))
         cv::Mat IW;
-        warpAffine(A, imgI, IW, omega);
+        warpAffine(imgI, IW, A, omega);
 
         //! Step2: Warp the gradient ▽I with W(x;p)
         cv::Mat gradIx;
@@ -93,9 +89,11 @@ void additiveImageAlign(cv::Mat& imgT, cv::Mat& imgI, cv::Rect& omega)
         dA = (cv::Mat_<float>(3,3) <<dA11, dA12, dtx, dA21, dA22, dty, 0, 0, 0);
         A += dA;
 
-        /*std::cout<<"Ai:"<<A<<std::endl;
-        std::cout<<"Time:"<<iter<<"  ";
-        std::cout<<"Mean Error:"<<mean_error<<std::endl;*/
+#ifdef  DEBUG_INF_OUT
+		std::cout << "A:" << A << std::endl;
+		std::cout << "Tter:" << iter << "  ";
+		std::cout << "Mean Error:" << mean_error << std::endl;
+#endif // DEBUG_INF_OUT
 
         if(fabs(dA11) < EPS && fabs(dA12) < EPS && fabs(dA21) < EPS && fabs(dA22) < EPS && fabs(dtx) < EPS && fabs(dty) < EPS)
         {break;}
