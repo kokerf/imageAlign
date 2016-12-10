@@ -4,9 +4,9 @@
 #include <time.h>
 
 #include "visionkit.hpp"
-#include "additive.hpp"
+#include "invcomposit.hpp"
 
-void forwardAdditiveImageAlign(cv::Mat& imgT, cv::Mat& imgI, cv::Rect& omega)
+void forwardCompositionalImageAlign(cv::Mat& imgT, cv::Mat& imgI, cv::Rect omega)
 {
     const float EPS = 1E-5f; // Threshold value for termination criteria.
     const int MAX_ITER = 100;  // Maximum iteration count.
@@ -14,7 +14,7 @@ void forwardAdditiveImageAlign(cv::Mat& imgT, cv::Mat& imgI, cv::Rect& omega)
     const int cols = omega.width;
     const int rows = omega.height;
 
-    std::cout << std::endl << "Start Forward Additive Algorithm!" << std::endl;
+    std::cout << std::endl << "Start Forward Compositional Algorithm!" << std::endl;
 
     clock_t start_time = clock();
 
@@ -23,19 +23,12 @@ void forwardAdditiveImageAlign(cv::Mat& imgT, cv::Mat& imgI, cv::Rect& omega)
     */
 
     cv::Mat T = imgT(omega).clone();
-
-    //! Step1: Get gradient ▽I
-    //! this ▽I is gradient of original image, not the 'I' we discuss which is rectangular eare of the original image
-    cv::Mat gradIx, gradIy;
-    gradient(imgI, gradIx, 1, 0);
-    gradient(imgI, gradIy, 0, 1);
-
+    
     /*
     *   Iteration stage.
     */
 
     //! Evaluate Model's Parameter in Warp: p
-    cv::Mat p = cv::Mat::zeros(6, 1, CV_32FC1);
     cv::Mat A = cv::Mat::eye(3, 3, CV_32FC1);
 
     float mean_error = 0;
@@ -50,13 +43,16 @@ void forwardAdditiveImageAlign(cv::Mat& imgT, cv::Mat& imgI, cv::Rect& omega)
         cv::Mat H = cv::Mat::zeros(6, 6, CV_32FC1);
         cv::Mat Jres = cv::Mat::zeros(6, 1, CV_32FC1);
         cv::Mat dp = cv::Mat::zeros(6, 1, CV_32FC1);
+        cv::Mat dA;
 
-        //! Step2: Get the Warp Image of I: I(W(x;p))
+        //! Step1: Get the Warp Image of I: I(W(x;p))
         warpAffine(imgI, IW, A, omega);
 
-        //! Step3: Warp the gradient ▽I with W(x;p)
-        warpAffine_float(gradIx, gradIx_W, A, omega);
-        warpAffine_float(gradIy, gradIy_W, A, omega);
+        //! Step2: Get gradient ▽I(W)
+        //! it is better to get IW with border, then calculate the gradient of IW
+        cv::Mat gradIWx, gradIWy;
+        gradient(IW, gradIWx, 1, 0);
+        gradient(IW, gradIWy, 0, 1);
 
         cv::Mat jac;
         cv::Mat dxy;
@@ -67,34 +63,39 @@ void forwardAdditiveImageAlign(cv::Mat& imgT, cv::Mat& imgI, cv::Rect& omega)
             uint8_t* pT = T.ptr<uint8_t>(y);
             for(int x = 0; x < cols; ++x)
             {
-                //! Step4: Evaluate the Jacobin ∂W/∂p at (x;p)
+                //! Step3: Evaluate the Jacobin ∂W/∂p at (x;p)
                 jac = (cv::Mat_<float>(2, 6) << x, y, 0, 0, 1, 0, 0, 0, x, y, 0, 1);
 
-                //! Step5: Calculate steepest descent image ▽I*∂W/∂p
-                dxy = (cv::Mat_<float>(1, 2) << gradIx_W.at<float>(y, x), gradIy_W.at<float>(y, x));
+                //! Step4: Calculate steepest descent image ▽I*∂W/∂p
+                dxy = (cv::Mat_<float>(1, 2) << gradIWx.at<float>(y, x), gradIWy.at<float>(y, x));
                 J = dxy*jac;
 
-                //! Step6: Calculate Hessian Matrix H = ∑x[▽I*∂W/∂p]^T*[▽I*∂W/∂p]
+                //! Step5: Calculate Hessian Matrix H = ∑x[▽I*∂W/∂p]^T*[▽I*∂W/∂p]
                 H += J.t() * J;
 
-                //! Step7: Compute the error image T(x) - I(W(x:p))
+                //! Step6: Compute the error image T(x) - I(W(x:p))
                 float res = pT[x] * 1.0 - pIW[x];
                 mean_error += res*res;
 
-                //! Step8: Compute Jres = ∑x[▽I*∂W/∂p]^T*[T(x)-I(W(x;p))]
+                //! Step7: Compute Jres = ∑x[▽I*∂W/∂p]^T*[T(x)-I(W(x;p))]
                 Jres += J.t() * res;
             }
         }
 
         mean_error /= rows*cols;
 
-        //! Step9: Compute △p = H^(-1) * Jres
+        //! Step8: Compute △p = H^(-1) * Jres
         dp = H.inv() * Jres;
 
-        //! Step10: Update the parameters p = p + △p
-        p += dp;
-        float* pp = p.ptr<float>(0);
-        A = (cv::Mat_<float>(3, 3) << 1 + *pp, *(pp + 1), *(pp + 4), *(pp + 2), 1 + *(pp + 3), *(pp + 5), 0, 0, 1);
+        //! Step9: Update the parameters p = p * △p
+        float dA11 = dp.at<float>(0,0);
+        float dA12 = dp.at<float>(1,0);
+        float dA21 = dp.at<float>(2,0);
+        float dA22 = dp.at<float>(3,0);
+        float dtx = dp.at<float>(4,0);
+        float dty = dp.at<float>(5,0);
+        dA = (cv::Mat_<float>(3, 3) << dA11 + 1, dA12, dtx, dA21, dA22 + 1, dty, 0, 0, 1);
+        A *= dA;
 
 #ifdef  DEBUG_INF_OUT
         std::cout << "A:" << A << std::endl;
@@ -102,7 +103,7 @@ void forwardAdditiveImageAlign(cv::Mat& imgT, cv::Mat& imgI, cv::Rect& omega)
         std::cout << "Mean Error:" << mean_error << std::endl;
 #endif // DEBUG_INF_OUT
 
-        if (fabs(dp.at<float>(0, 0)) < EPS && fabs(dp.at<float>(1, 0)) < EPS && fabs(dp.at<float>(2, 0)) < EPS && fabs(dp.at<float>(3, 0)) < EPS && fabs(dp.at<float>(4, 0)) < EPS && fabs(dp.at<float>(5, 0)) < EPS)
+        if(fabs(dA11) < EPS && fabs(dA12) < EPS && fabs(dA21) < EPS && fabs(dA22) < EPS && fabs(dtx) < EPS && fabs(dty) < EPS)
         {break;}
     }
     clock_t finish_time = clock();
@@ -110,7 +111,7 @@ void forwardAdditiveImageAlign(cv::Mat& imgT, cv::Mat& imgI, cv::Rect& omega)
 
     //! Print summary.
     std::cout << "===============================================" << std::endl;
-    std::cout << "Algorithm: Forward Additive" << std::endl;
+    std::cout << "Algorithm: Forward Compositional" << std::endl;
     std::cout << "A:" << std::endl << A << std::endl;
     std::cout << "Mean Error:" << mean_error << std::endl;
     std::cout << "Iteration:" << iter << std::endl;

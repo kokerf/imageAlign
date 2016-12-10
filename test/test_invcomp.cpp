@@ -2,8 +2,7 @@
 #include <opencv2/opencv.hpp>
 
 #include "visionkit.hpp"
-#include "invcomp.hpp"
-#include "additive.hpp"
+#include "invcomposit.hpp"
 
 int main(int argc, char const *argv[])
 {
@@ -23,7 +22,7 @@ int main(int argc, char const *argv[])
 
     //! Set Affine Model
     cv::Rect omega = cv::Rect(110, 100, 200, 150);
-    intAffine(A, 1.2, 0.3, 0, 1.0, 0, 0);
+    intAffine(A, 1.0, 0.2, 0, 1.0, 0, 0);
     cv::Point2d O(omega.x + 0.5*omega.width, omega.y + 0.5*omega.height);
     warpAffine(image, imgAff, A, O);
 
