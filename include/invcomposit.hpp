@@ -1,5 +1,5 @@
-#ifndef _IMVCOMP_HPP_
-#define _IMVCOMP_HPP_
+#ifndef _IMVCOMPOSIT_HPP_
+#define _IMVCOMPOSIT_HPP_
 
 #include <opencv2/opencv.hpp>
 
