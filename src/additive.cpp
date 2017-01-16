@@ -19,13 +19,13 @@ void forwardAdditiveImageAlign(cv::Mat& imgT, cv::Mat& imgI, cv::Rect& omega)
     clock_t start_time = clock();
 
     /*
-    *  Precomputation stage.
+    *  Pre-computation stage.
     */
 
     cv::Mat T = imgT(omega).clone();
 
-    //! Step1: Get gradient ▽I
-    //! this ▽I is gradient of original image, not the 'I' we discuss which is rectangular eare of the original image
+    //! 1. Get gradient ▽I
+    //! this ▽I is gradient of original image, not the 'I' we discuss which is rectangular area of the original image
     cv::Mat gradIx, gradIy;
     gradient(imgI, gradIx, 1, 0);
     gradient(imgI, gradIy, 0, 1);
@@ -34,7 +34,6 @@ void forwardAdditiveImageAlign(cv::Mat& imgT, cv::Mat& imgI, cv::Rect& omega)
     *   Iteration stage.
     */
 
-    //! Evaluate Model's Parameter in Warp: p
     cv::Mat p = cv::Mat::zeros(6, 1, CV_32FC1);
     cv::Mat A = cv::Mat::eye(3, 3, CV_32FC1);
 
@@ -51,10 +50,10 @@ void forwardAdditiveImageAlign(cv::Mat& imgT, cv::Mat& imgI, cv::Rect& omega)
         cv::Mat Jres = cv::Mat::zeros(6, 1, CV_32FC1);
         cv::Mat dp = cv::Mat::zeros(6, 1, CV_32FC1);
 
-        //! Step2: Get the Warp Image of I: I(W(x;p))
+        //! 2. [Step-1]Get the Warp Image of I: I(W(x;p))
         warpAffine(imgI, IW, A, omega);
 
-        //! Step3: Warp the gradient ▽I with W(x;p)
+        //! 3. [Step-3]Warp the gradient ▽I with W(x;p)
         warpAffine_float(gradIx, gradIx_W, A, omega);
         warpAffine_float(gradIy, gradIy_W, A, omega);
 
@@ -67,31 +66,31 @@ void forwardAdditiveImageAlign(cv::Mat& imgT, cv::Mat& imgI, cv::Rect& omega)
             uint8_t* pT = T.ptr<uint8_t>(y);
             for(int x = 0; x < cols; ++x)
             {
-                //! Step4: Evaluate the Jacobin ∂W/∂p at (x;p)
+                //! 4. [Step-4]Evaluate the Jacobin ∂W/∂p at (x;p)
                 jac = (cv::Mat_<float>(2, 6) << x, y, 0, 0, 1, 0, 0, 0, x, y, 0, 1);
 
-                //! Step5: Calculate steepest descent image ▽I*∂W/∂p
+                //! 5. [Step-5]Calculate steepest descent image ▽I*∂W/∂p
                 dxy = (cv::Mat_<float>(1, 2) << gradIx_W.at<float>(y, x), gradIy_W.at<float>(y, x));
                 J = dxy*jac;
 
-                //! Step6: Calculate Hessian Matrix H = ∑x[▽I*∂W/∂p]^T*[▽I*∂W/∂p]
+                //! 6. [Step-6]Calculate Hessian Matrix H = ∑x[▽I*∂W/∂p]^T*[▽I*∂W/∂p]
                 H += J.t() * J;
 
-                //! Step7: Compute the error image T(x) - I(W(x:p))
+                //! 7. [Step-2]Compute the error image T(x) - I(W(x:p))
                 float res = pT[x] * 1.0 - pIW[x];
                 mean_error += res*res;
 
-                //! Step8: Compute Jres = ∑x[▽I*∂W/∂p]^T*[T(x)-I(W(x;p))]
+                //! 8. [Step-7]Compute Jres = ∑x[▽I*∂W/∂p]^T*[T(x)-I(W(x;p))]
                 Jres += J.t() * res;
             }
         }
 
         mean_error /= rows*cols;
 
-        //! Step9: Compute △p = H^(-1) * Jres
+        //! 9. [Step-8]Compute △p = H^(-1) * Jres
         dp = H.inv() * Jres;
 
-        //! Step10: Update the parameters p = p + △p
+        //! 10. [Step-9]Update the parameters p = p + △p
         p += dp;
         float* pp = p.ptr<float>(0);
         A = (cv::Mat_<float>(3, 3) << 1 + *pp, *(pp + 1), *(pp + 4), *(pp + 2), 1 + *(pp + 3), *(pp + 5), 0, 0, 1);

@@ -15,7 +15,7 @@
 //      | 0 0 x y 0 1|
 //      
 // Jx = | 1+a11   a12|  Jx^(-1) = 1/det*| 1+a22 -a12|  det = (1+a11)*(1+a22) - a12*a21
-//      | a21   1+a22|                  | -a21 1+a22|
+//      | a21   1+a22|                  | -a21 1+a11|
 // 
 // Jx^(-1)*Jp = Γ(x) * ∑(p)
 // = 1/det * | x y 0 0 1 0| * | 1+a22   0    -a12     0     0      0  |
@@ -38,9 +38,9 @@ void inverseAdditiveImageAlign(cv::Mat& imgT, cv::Mat& imgI, cv::Rect& omega)
     clock_t start_time = clock();
 
     /*
-    *  Precomputation stage.
+    *  Pre-computation stage.
     */
-    //! Step1: Evaluate the gradient of the templet ▽T
+    //! 1. [Step-3]Evaluate the gradient of the template ▽T
     //! the function gradient expansions the image with border then get gradient
     //! it is better to calculate the gradient of imgT then get the gradient of T
     cv::Mat T = imgT(omega).clone();
@@ -51,25 +51,25 @@ void inverseAdditiveImageAlign(cv::Mat& imgT, cv::Mat& imgI, cv::Rect& omega)
     cv::Mat stdesctImage = cv::Mat::zeros(cols*rows, 6, CV_32FC1);
     cv::Mat H_ = cv::Mat::zeros(6, 6, CV_32FC1);
 
-    cv::Mat jac_p;
+    cv::Mat jac_x;
     cv::Mat dxy;
     cv::Mat J;
     for(int y = 0; y < rows; ++y)
     {
         for(int x = 0; x < cols; ++x)
         {
-            //! Step2: Evaluate Γ(x) = Jp
-            jac_p = (cv::Mat_<float>(2, 6) << x, y, 0, 0, 1, 0, 0, 0, x, y, 0, 1);
+            //! 2: [Step-4]Evaluate Γ(x) = Jx
+            jac_x = (cv::Mat_<float>(2, 6) << x, y, 0, 0, 1, 0, 0, 0, x, y, 0, 1);
 
-            //! Step3: Calculate modified steepest descent image
+            //! 3. [Step-5]Calculate modified steepest descent image ▽TΓ(x)
             dxy = (cv::Mat_<float>(1, 2) << gradTx.at<float>(y, x), gradTy.at<float>(y, x));
-            J = dxy*jac_p;
+            J = dxy*jac_x;
             
             J.copyTo(stdesctImage.row(x + y*cols));
         }
     }
 
-    //! Step4: Calculate modified Hessian Matrix H* = ∑x[▽I*Γ(x)]^T*[▽I*Γ(x)]
+    //! 4. [Step-6]Calculate modified Hessian Matrix H* = ∑x[▽I*Γ(x)]^T*[▽I*Γ(x)]
     H_ = stdesctImage.t() * stdesctImage;
 
     /*
@@ -93,7 +93,7 @@ void inverseAdditiveImageAlign(cv::Mat& imgT, cv::Mat& imgI, cv::Rect& omega)
         cv::Mat Jres = cv::Mat::zeros(6, 1, CV_32FC1);
         cv::Mat dp = cv::Mat::zeros(6, 1, CV_32FC1);
 
-        //! Step5: Get the Warp Image of I: I(W(x;p))
+        //! 5. [Step-1]Get the Warp Image of I: I(W(x;p))
         warpAffine(imgI, IW, A, omega);
 
         for(int y = 0; y < rows; ++y)
@@ -102,12 +102,12 @@ void inverseAdditiveImageAlign(cv::Mat& imgT, cv::Mat& imgI, cv::Rect& omega)
             uint8_t* pT = T.ptr<uint8_t>(y);
             for(int x = 0; x < cols; ++x)
             {
-                //! Step6: Compute the error image: Res = I(W(x;p)) - T(x)
+                //! 6. [Step-2]Compute the error image: Res = I(W(x;p)) - T(x)
                 float res = pIW[x] * 1.0 - pT[x];
 
                 mean_error += res*res;
 
-                //! Step7: Compute Jres = ∑x[▽I*Γ(x)]^T*[T(x)-I(W(x;p))]
+                //! 7. [Step-7]Compute Jres = ∑x[▽I*Γ(x)]^T*[T(x)-I(W(x;p))]
                 cv::Mat JT = stdesctImage.row(x + y*cols).t();
                 Jres += JT * res;
             }
@@ -115,13 +115,13 @@ void inverseAdditiveImageAlign(cv::Mat& imgT, cv::Mat& imgI, cv::Rect& omega)
 
         mean_error /= rows*cols;
 
-        //! Step8: Compute Parameter Increment: Δp = ∑(p)^(-1) * H*^(-1) * Jres, Δp* = H*^(-1) * Jres
+        //! 8. [Step-8]Compute Parameter Increment: Δp = ∑(p)^(-1) * H*^(-1) * Jres, Δp* = H*^(-1) * Jres
         float a11 = A.at<float>(0, 0) - 1;
         float a12 = A.at<float>(1, 0);
         float a21 = A.at<float>(0, 1);
         float a22 = A.at<float>(1, 1) - 1;
         float det = (1 + a11)*(1 + a22) - a12*a21;
-        cv::Mat jac_x = (cv::Mat_<float>(6, 6) <<
+        cv::Mat jac_p = (cv::Mat_<float>(6, 6) <<
             1 + a22, 0, -a12, 0, 0, 0,
             0, 1 + a22, 0, -a12, 0, 0,
             -a21, 0, 1 + a22, 0, 0, 0,
@@ -129,11 +129,11 @@ void inverseAdditiveImageAlign(cv::Mat& imgT, cv::Mat& imgI, cv::Rect& omega)
             0, 0, 0, 0, 1 + a22, -a12,
             0, 0, 0, 0, -a21, 1 + a22);
 
-        //! the following two lines can modify to: dp = det * (H_ * jac_x).inv() * Jres;
-        jac_x /= det;
-        dp = jac_x.inv() * H_.inv() * Jres;
+        //! the following two lines can modify to: dp = det * (H_ * jac_p).inv() * Jres;
+        jac_p /= det;
+        dp = jac_p.inv() * H_.inv() * Jres;
 
-        //! Step9: Update the parameters p = p - △p
+        //! 9. [Step-9]Update the parameters p = p - △p
         p -= dp;
         float* pp = p.ptr<float>(0);
         A = (cv::Mat_<float>(3, 3) << 1 + *pp, *(pp + 1), *(pp + 4), *(pp + 2), 1 + *(pp + 3), *(pp + 5), 0, 0, 1);

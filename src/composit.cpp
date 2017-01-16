@@ -4,7 +4,7 @@
 #include <time.h>
 
 #include "visionkit.hpp"
-#include "invcomposit.hpp"
+#include "composit.hpp"
 
 void forwardCompositionalImageAlign(cv::Mat& imgT, cv::Mat& imgI, cv::Rect omega)
 {
@@ -18,17 +18,12 @@ void forwardCompositionalImageAlign(cv::Mat& imgT, cv::Mat& imgI, cv::Rect omega
 
     clock_t start_time = clock();
 
-    /*
-    *  Precomputation stage.
-    */
-
     cv::Mat T = imgT(omega).clone();
     
     /*
     *   Iteration stage.
     */
 
-    //! Evaluate Model's Parameter in Warp: p
     cv::Mat A = cv::Mat::eye(3, 3, CV_32FC1);
 
     float mean_error = 0;
@@ -45,10 +40,10 @@ void forwardCompositionalImageAlign(cv::Mat& imgT, cv::Mat& imgI, cv::Rect omega
         cv::Mat dp = cv::Mat::zeros(6, 1, CV_32FC1);
         cv::Mat dA;
 
-        //! Step1: Get the Warp Image of I: I(W(x;p))
+        //! 1. [Step-1]Get the Warp Image of I: I(W(x;p))
         warpAffine(imgI, IW, A, omega);
 
-        //! Step2: Get gradient ▽I(W)
+        //! 2. [Step-3]Get gradient ▽I(W)
         //! it is better to get IW with border, then calculate the gradient of IW
         cv::Mat gradIWx, gradIWy;
         gradient(IW, gradIWx, 1, 0);
@@ -63,28 +58,28 @@ void forwardCompositionalImageAlign(cv::Mat& imgT, cv::Mat& imgI, cv::Rect omega
             uint8_t* pT = T.ptr<uint8_t>(y);
             for(int x = 0; x < cols; ++x)
             {
-                //! Step3: Evaluate the Jacobin ∂W/∂p at (x;p)
+                //! 3. [Step-4]Evaluate the Jacobin ∂W/∂p at (x;p)
                 jac = (cv::Mat_<float>(2, 6) << x, y, 0, 0, 1, 0, 0, 0, x, y, 0, 1);
 
-                //! Step4: Calculate steepest descent image ▽I*∂W/∂p
+                //! 4. [Step-5]Calculate steepest descent image ▽I*∂W/∂p
                 dxy = (cv::Mat_<float>(1, 2) << gradIWx.at<float>(y, x), gradIWy.at<float>(y, x));
                 J = dxy*jac;
 
-                //! Step5: Calculate Hessian Matrix H = ∑x[▽I*∂W/∂p]^T*[▽I*∂W/∂p]
+                //! 5. [Step-6]Calculate Hessian Matrix H = ∑x[▽I*∂W/∂p]^T*[▽I*∂W/∂p]
                 H += J.t() * J;
 
-                //! Step6: Compute the error image T(x) - I(W(x:p))
+                //! 6. [Step-2]Compute the error image T(x) - I(W(x:p))
                 float res = pT[x] * 1.0 - pIW[x];
                 mean_error += res*res;
 
-                //! Step7: Compute Jres = ∑x[▽I*∂W/∂p]^T*[T(x)-I(W(x;p))]
+                //! 7. [Step-7]Compute Jres = ∑x[▽I*∂W/∂p]^T*[T(x)-I(W(x;p))]
                 Jres += J.t() * res;
             }
         }
 
         mean_error /= rows*cols;
 
-        //! Step8: Compute △p = H^(-1) * Jres
+        //! 8. [Step-8]Compute △p = H^(-1) * Jres
         dp = H.inv() * Jres;
 
         //! Step9: Update the parameters p = p * △p
