@@ -22,10 +22,9 @@ In the root directory of the image alignment demo, run the following comments:
 	$ cmake ..
 	$ make
 
-After building, there will be 4 executable files in `/bin`, that we can just run.
-Such as:
+After building, there will be an executable files in `/bin`, that we can just run as follows. The `algorithm_name` can be `additive`, `composit`, `invadditive` or `invcomposit`.
 
-	../bin/test_additive
+	../bin/test_imageAlign algorithm_name
 
 ## Reference
 

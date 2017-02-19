@@ -15,7 +15,7 @@ if(DEFINE_DBUG_INFOUT)
 endif(DEFINE_DBUG_INFOUT)
 
 #==============OpenCV Library=========================
-set(OpenCV_DIR "B:/opencv/build")
+set(OpenCV_DIR "D:\\library\\opencv\\build")
 
 find_package(OpenCV 3.1.0 EXACT REQUIRED)
 if(OpenCV_FOUND)
@@ -26,24 +26,12 @@ if(OpenCV_FOUND)
 endif()
 #==============Create executable file==================
 include_directories(${PROJECT_SOURCE_DIR}/include)
-add_executable(test_invcomp  test/test_invcomp.cpp
-                        src/invcomposit.cpp
-                        src/visionkit.cpp)
-
-add_executable(test_additive test/test_additive.cpp
-                        src/additive.cpp
-                        src/visionkit.cpp)
-
-add_executable(test_composit test/test_composit.cpp
-                        src/composit.cpp
-                        src/visionkit.cpp)
-
-add_executable(test_invaddt test/test_invaddt.cpp
-                        src/invadditive.cpp
-                        src/visionkit.cpp)
+add_executable(test_imageAlign  test/test_imageAlign.cpp
+                            src/invcomposit.cpp
+                            src/visionkit.cpp
+                            src/additive.cpp
+                            src/composit.cpp
+                            src/invadditive.cpp)
 
 #==============Link libraries to executable file=======
-target_link_libraries(test_invcomp ${OpenCV_LIBS})
-target_link_libraries(test_additive ${OpenCV_LIBS})
-target_link_libraries(test_composit ${OpenCV_LIBS})
-target_link_libraries(test_invaddt ${OpenCV_LIBS})
+target_link_libraries(test_imageAlign ${OpenCV_LIBS})
