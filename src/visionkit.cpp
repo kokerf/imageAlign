@@ -46,7 +46,7 @@ void warpAffine(
 
     uint8_t* im_ptr = img_out.data;
     //! (u,v) is warp from (x,y) in img_out
-    int u, v;
+    float u, v;
     for(int y = 0; y < destRows; ++y)
     {
         for(int x = 0; x < destCols; ++x, ++im_ptr)
@@ -102,7 +102,7 @@ void warpAffine(
 
     uint8_t* im_ptr = img_out.data;
     //! (u,v) is in img_out
-    int u, v;
+    float u, v;
     for (int y = 0; y < destRows; ++y)
     {
         for (int x = 0; x < destCols; ++x, ++im_ptr)
@@ -161,7 +161,7 @@ void warpAffine_float(
     //float* im_ptr = (float*)img_out.data;
     float* im_ptr = img_out.ptr<float>(0);
     //! (u,v) is warp from (x,y) in img_out
-    int u, v;
+    float u, v;
     for (int y = 0; y < destRows; ++y)
     {
         for (int x = 0; x < destCols; ++x, ++im_ptr)
@@ -272,7 +272,7 @@ float interpolateMat_8u(const cv::Mat& mat, float u, float v)
     //! addr(Mij) = M.data + M.step[0]*i + M.step[1]*j
     const int stride = mat.step.p[0];
     unsigned char* ptr = mat.data + y*stride + x;
-    return w00*ptr[0] + w01*ptr[stride] + w10*ptr[1] + w11*ptr[stride + 1];
+    return w00*ptr[0] + w01*ptr[stride] + w10*ptr[1] + w11*ptr[stride + 1] + 0.5;//! add 0.5 to round off!
 }
 
 //! https://github.com/uzh-rpg/rpg_vikit/blob/master/vikit_common/include/vikit/vision.h
