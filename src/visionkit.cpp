@@ -13,7 +13,7 @@ void intAffine(cv::Mat& A, float a11, float a12, float a21, float a22, float tx,
 }
 
 // the origin of axis of the Affine is on the centre of the picture
-void warpAffine(
+void warpAffineback(
     const cv::Mat& img_ref,
     cv::Mat& img_out,
     const cv::Mat& A,
@@ -21,21 +21,21 @@ void warpAffine(
     cv::Point2d O,
     bool flag)
 {
-    assert(img_ref.type()==CV_8UC1);
-    assert(A.rows== 3 && A.cols==3);
+    assert(img_ref.type() == CV_8UC1);
+    assert(A.rows == 3 && A.cols == 3);
 
     if(!img_out.empty())
     {
         img_out.release();
     }
     img_out = cv::Mat::zeros(omega.height, omega.width, CV_8UC1);
-    
+
     const int refCols = img_ref.cols;
     const int refRows = img_ref.rows;
     const int destCols = img_out.cols;
     const int destRows = img_out.rows;
-    const float cx = (!flag) ? (omega.width*0.5) : (O.x);
-    const float cy = (!flag) ? (omega.height*0.5) : (O.y);
+    const float cx = (!flag) ? (omega.width*0.5 + omega.x) : (O.x);
+    const float cy = (!flag) ? (omega.height*0.5 + omega.y) : (O.y);
 
     float a11 = A.at<float>(0, 0);
     float a12 = A.at<float>(0, 1);
@@ -45,30 +45,40 @@ void warpAffine(
     float ty = A.at<float>(1, 2);
 
     uint8_t* im_ptr = img_out.data;
-    //! (u,v) is warp from (x,y) in img_out
-    float u, v;
+    float u, v;//! (u,v) in img_ref
+    float u1, v1;//! (u1,v1) in img_out
     for(int y = 0; y < destRows; ++y)
     {
+        v1 = y + omega.y;
         for(int x = 0; x < destCols; ++x, ++im_ptr)
         {
-            u = a11 * (x - cx) + a12 * (y - cy) + tx;
-            v = a21 * (x - cx) + a22 * (y - cy) + ty;
+            u1 = x + omega.x;
+
+            u = a11 * (u1 - cx) + a12 * (v1 - cy) + tx;
+            v = a21 * (u1 - cx) + a22 * (v1 - cy) + ty;
             u += cx;
             v += cy;
 
-            float u1, v1;
-            u1 = u + omega.x;
-            v1 = v + omega.y;
-
-            if(u1 < 0 || v1 < 0 || u1 > refCols -1 || v1 > refRows-1)
+            if(u < 0 || v < 0 || u > refCols - 1 || v > refRows - 1)
                 continue;
             else
             {
-                *im_ptr = (uint8_t)interpolateMat_8u(img_ref, u1, v1);
+                *im_ptr = (uint8_t)interpolateMat_8u(img_ref, u, v);
             }
         }
     }
+}
 
+void warpAffine(
+    const cv::Mat& img_ref,
+    cv::Mat& img_out,
+    const cv::Mat& A,
+    cv::Rect& omega,
+    cv::Point2d O,
+    bool flag)
+{
+    cv::Mat Ainv = A.inv();
+    warpAffineback(img_ref, img_out, A, omega, O, flag);
 }
 
 void warpAffine(
@@ -93,41 +103,40 @@ void warpAffine(
     const int destCols = img_out.cols;
     const int destRows = img_out.rows;
 
-    float a11 = A.at<float>(0, 0);
-    float a12 = A.at<float>(0, 1);
-    float a21 = A.at<float>(1, 0);
-    float a22 = A.at<float>(1, 1);
-    float tx = A.at<float>(0, 2);
-    float ty = A.at<float>(1, 2);
+    cv::Mat Ainv = A.inv();
+    float a11 = Ainv.at<float>(0, 0);
+    float a12 = Ainv.at<float>(0, 1);
+    float a21 = Ainv.at<float>(1, 0);
+    float a22 = Ainv.at<float>(1, 1);
+    float tx = Ainv.at<float>(0, 2);
+    float ty = Ainv.at<float>(1, 2);
 
     uint8_t* im_ptr = img_out.data;
-    //! (u,v) is in img_out
-    float u, v;
-    for (int y = 0; y < destRows; ++y)
+    float u, v;//! (u,v) in img_ref
+    float u1, v1;//! (u1,v1) in img_out
+    for(int y = 0; y < destRows; ++y)
     {
-        for (int x = 0; x < destCols; ++x, ++im_ptr)
+        v1 = y;
+        for(int x = 0; x < destCols; ++x, ++im_ptr)
         {
-            u = a11 * (x - cx) + a12 * (y - cy) + tx;
-            v = a21 * (x - cx) + a22 * (y - cy) + ty;
+            u1 = x;
+
+            u = a11 * (u1 - cx) + a12 * (v1 - cy) + tx;
+            v = a21 * (u1 - cx) + a22 * (v1 - cy) + ty;
             u += cx;
             v += cy;
 
-            float u1, v1;
-            u1 = u;
-            v1 = v;
-
-            if (u1 < 0 || v1 < 0 || u1 > refCols - 1 || v1 > refRows - 1)
+            if(u < 0 || v < 0 || u > refCols - 1 || v > refRows - 1)
                 continue;
             else
             {
-                *im_ptr = (uint8_t)interpolateMat_8u(img_ref, u1, v1);
+                *im_ptr = (uint8_t)interpolateMat_8u(img_ref, u, v);
             }
         }
     }
-
 }
 
-void warpAffine_float(
+void warpAffineback_float(
     const cv::Mat& img_ref,
     cv::Mat& img_out,
     const cv::Mat& A,
@@ -148,8 +157,8 @@ void warpAffine_float(
     const int refRows = img_ref.rows;
     const int destCols = img_out.cols;
     const int destRows = img_out.rows;
-    const float cx = (!flag) ? (omega.width*0.5) : (O.x);
-    const float cy = (!flag) ? (omega.height*0.5) : (O.y);
+    const float cx = (!flag) ? (omega.width*0.5 + omega.x) : (O.x);
+    const float cy = (!flag) ? (omega.height*0.5 + omega.x) : (O.y);
 
     float a11 = A.at<float>(0, 0);
     float a12 = A.at<float>(0, 1);
@@ -160,29 +169,41 @@ void warpAffine_float(
 
     //float* im_ptr = (float*)img_out.data;
     float* im_ptr = img_out.ptr<float>(0);
-    //! (u,v) is warp from (x,y) in img_out
-    float u, v;
-    for (int y = 0; y < destRows; ++y)
+    float u, v;//! (u,v) in img_ref
+    float u1, v1;//! (u1,v1) in img_out
+    for(int y = 0; y < destRows; ++y)
     {
-        for (int x = 0; x < destCols; ++x, ++im_ptr)
+        v1 = y + omega.y;
+
+        for(int x = 0; x < destCols; ++x, ++im_ptr)
         {
-            u = a11 * (x - cx) + a12 * (y - cy) + tx;
-            v = a21 * (x - cx) + a22 * (y - cy) + ty;
+            u1 = x + omega.x;
+
+            u = a11 * (u1 - cx) + a12 * (v1 - cy) + tx;
+            v = a21 * (u1 - cx) + a22 * (v1 - cy) + ty;
             u += cx;
             v += cy;
 
-            float u1, v1;
-            u1 = u + omega.x;
-            v1 = v + omega.y;
-
-            if (u1 < 0 || v1 < 0 || u1 > refCols - 1 || v1 > refRows - 1)
+            if(u < 0 || v < 0 || u > refCols - 1 || v > refRows - 1)
                 continue;
             else
             {
-                *im_ptr = interpolateMat_32f(img_ref, u1, v1);
+                *im_ptr = interpolateMat_32f(img_ref, u, v);
             }
         }
     }
+}
+
+void warpAffine_float(
+    const cv::Mat& img_ref,
+    cv::Mat& img_out,
+    const cv::Mat& A,
+    cv::Rect& omega,
+    cv::Point2d O,
+    bool flag)
+{
+    cv::Mat Ainv = A.inv();
+    warpAffineback_float(img_ref, img_out, A, omega, O, flag);
 }
 
 void gradient(const cv::Mat& I, cv::Mat& G, int dx, int dy)
