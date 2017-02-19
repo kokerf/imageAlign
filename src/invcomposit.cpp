@@ -80,7 +80,7 @@ void inverseCompositionalImageAlign(cv::Mat& imgT, cv::Mat& imgI, cv::Rect omega
         cv::Mat dA;
 
         //! 6. [Step-1]Get the Warp Image of I: I(W(x;p))
-        warpAffine(imgI, IW, A, omega);
+        warpAffineback(imgI, IW, A, omega);
 
         for(int y = 0; y < rows; ++y)
         {

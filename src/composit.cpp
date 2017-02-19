@@ -32,6 +32,7 @@ void forwardCompositionalImageAlign(cv::Mat& imgT, cv::Mat& imgI, cv::Rect omega
     while(iter < MAX_ITER)
     {
         iter++;
+        mean_error = 0;
 
         cv::Mat IW;
         cv::Mat gradIx_W, gradIy_W;
@@ -41,7 +42,7 @@ void forwardCompositionalImageAlign(cv::Mat& imgT, cv::Mat& imgI, cv::Rect omega
         cv::Mat dA;
 
         //! 1. [Step-1]Get the Warp Image of I: I(W(x;p))
-        warpAffine(imgI, IW, A, omega);
+        warpAffineback(imgI, IW, A, omega);
 
         //! 2. [Step-3]Get gradient ▽I(W)
         //! it is better to get IW with border, then calculate the gradient of IW

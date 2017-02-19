@@ -94,7 +94,7 @@ void inverseAdditiveImageAlign(cv::Mat& imgT, cv::Mat& imgI, cv::Rect& omega)
         cv::Mat dp = cv::Mat::zeros(6, 1, CV_32FC1);
 
         //! 5. [Step-1]Get the Warp Image of I: I(W(x;p))
-        warpAffine(imgI, IW, A, omega);
+        warpAffineback(imgI, IW, A, omega);
 
         for(int y = 0; y < rows; ++y)
         {

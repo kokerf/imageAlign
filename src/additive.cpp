@@ -43,6 +43,7 @@ void forwardAdditiveImageAlign(cv::Mat& imgT, cv::Mat& imgI, cv::Rect& omega)
     while(iter < MAX_ITER)
     {
         iter++;
+        mean_error = 0;
 
         cv::Mat IW;
         cv::Mat gradIx_W, gradIy_W;
@@ -51,15 +52,16 @@ void forwardAdditiveImageAlign(cv::Mat& imgT, cv::Mat& imgI, cv::Rect& omega)
         cv::Mat dp = cv::Mat::zeros(6, 1, CV_32FC1);
 
         //! 2. [Step-1]Get the Warp Image of I: I(W(x;p))
-        warpAffine(imgI, IW, A, omega);
+        warpAffineback(imgI, IW, A, omega);
 
         //! 3. [Step-3]Warp the gradient ▽I with W(x;p)
-        warpAffine_float(gradIx, gradIx_W, A, omega);
-        warpAffine_float(gradIy, gradIy_W, A, omega);
+        warpAffineback_float(gradIx, gradIx_W, A, omega);
+        warpAffineback_float(gradIy, gradIy_W, A, omega);
 
         cv::Mat jac;
         cv::Mat dxy;
         cv::Mat J;
+
         for(int y = 0; y < rows; ++y)
         {
             uint8_t* pIW = IW.ptr<uint8_t>(y);
