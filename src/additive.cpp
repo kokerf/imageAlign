@@ -14,7 +14,7 @@ void forwardAdditiveImageAlign(cv::Mat& imgT, cv::Mat& imgI, cv::Rect& omega)
     const int cols = omega.width;
     const int rows = omega.height;
 
-    std::cout << std::endl << "Start Forward Additive Algorithm!" << std::endl;
+    std::cout << std::endl << "Start Forward Additive Algorithm!\n" << std::endl;
 
     clock_t start_time = clock();
 
