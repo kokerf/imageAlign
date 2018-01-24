@@ -3,6 +3,6 @@
 
 #include <opencv2/opencv.hpp>
 
-void forwardAdditiveImageAlign(cv::Mat& imgT, cv::Mat& imgI, cv::Rect& omega);
+void forwardAdditiveImageAlign(cv::Mat& imgT, cv::Mat& imgI, cv::Rect& omega, cv::Mat& affine, bool report = false);
 
 #endif

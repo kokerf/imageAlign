@@ -6,7 +6,7 @@
 #include "visionkit.hpp"
 #include "composit.hpp"
 
-void forwardCompositionalImageAlign(cv::Mat& imgT, cv::Mat& imgI, cv::Rect omega)
+void forwardCompositionalImageAlign(cv::Mat& imgT, cv::Mat& imgI, cv::Rect omega, cv::Mat& affine, bool report)
 {
     const float EPS = 1E-5f; // Threshold value for termination criteria.
     const int MAX_ITER = 100;  // Maximum iteration count.
@@ -104,6 +104,11 @@ void forwardCompositionalImageAlign(cv::Mat& imgT, cv::Mat& imgI, cv::Rect omega
     }
     clock_t finish_time = clock();
     double total_time = (double)(finish_time - start_time) / CLOCKS_PER_SEC;
+
+    affine = A;
+
+    if(!report)
+        return;
 
     //! Print summary.
     std::cout << "===============================================" << std::endl;

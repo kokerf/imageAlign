@@ -85,14 +85,20 @@ int main(int argc, char const *argv[])
     //! The Affine Matrix
     std::cout << std::endl << "A:" << std::endl << A << std::endl;
 
+    cv::Mat A_estimate;
+
     switch(type)
     {
-        case 1: forwardAdditiveImageAlign(T, I, omega); break;      //! Forward Additive Image Alignment Algorithm
-        case 2: forwardCompositionalImageAlign(T, I, omega); break; //! Forward Compositional Image Alignment Algorithm
-        case 3: inverseAdditiveImageAlign(T, I, omega); break;      //! Inverse Additive Image Alignment Algorithm
-        case 4: inverseCompositionalImageAlign(T, I, omega); break; //! Inverse Compositional Image Alignment Algorithm
+        case 1: forwardAdditiveImageAlign(T, I, omega, A_estimate, true); break;      //! Forward Additive Image Alignment Algorithm
+        case 2: forwardCompositionalImageAlign(T, I, omega, A_estimate, true); break; //! Forward Compositional Image Alignment Algorithm
+        case 3: inverseAdditiveImageAlign(T, I, omega, A_estimate, true); break;      //! Inverse Additive Image Alignment Algorithm
+        case 4: inverseCompositionalImageAlign(T, I, omega, A_estimate, true); break; //! Inverse Compositional Image Alignment Algorithm
         default: break;
     }
+
+    cv::Mat IW;
+    warpAffineback(I, IW, A_estimate, omega);
+    cv::imshow("warp back", IW);
 
     cv::waitKey(0);
 
