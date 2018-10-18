@@ -1,4 +1,6 @@
 *.a
 *~
-/build
+**build**
 /bin
+.idea
+.vs*

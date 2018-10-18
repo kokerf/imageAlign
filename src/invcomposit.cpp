@@ -6,7 +6,7 @@
 #include "visionkit.hpp"
 #include "invcomposit.hpp"
 
-void inverseCompositionalImageAlign(cv::Mat& imgT, cv::Mat& imgI, cv::Rect omega, cv::Mat& affine, bool report)
+void inverseCompositionalImageAlign(cv::Mat& imgT, cv::Mat& imgI, cv::Rect omega, cv::Mat& affine, int log_level, std::list<std::string> * log_str)
 {
     const float EPS = 1E-5f; // Threshold value for termination criteria.
     const int MAX_ITER = 100;  // Maximum iteration count.
@@ -114,11 +114,17 @@ void inverseCompositionalImageAlign(cv::Mat& imgT, cv::Mat& imgI, cv::Rect omega
         intAffine(dA, dA11 + 1, dA12, dA21, dA22 + 1, dtx, dty);
         A = A * dA.inv();
 
-#ifdef  DEBUG_INF_OUT
-        std::cout << "A:" << A << std::endl;
-        std::cout << "Iter:" << iter << "  ";
-        std::cout << "Mean Error:" << mean_error << std::endl;
-#endif // DEBUG_INF_OUT
+        if(log_level <= 0)
+        {
+            std::cout << "A:" << A << std::endl;
+            std::cout << "Iter:" << iter << ", Mean Error:" << mean_error << std::endl;
+        }
+
+        if(log_str)
+        {
+            std::string log = std::to_string(iter) + ", " + std::to_string(mean_error);
+            log_str->push_back(log);
+        }
 
         if(fabs(dA11) < EPS && fabs(dA12) < EPS && fabs(dA21) < EPS && fabs(dA22) < EPS && fabs(dtx) < EPS && fabs(dty) < EPS)
         {break;}
@@ -128,7 +134,7 @@ void inverseCompositionalImageAlign(cv::Mat& imgT, cv::Mat& imgI, cv::Rect omega
 
     affine = A;
 
-    if(!report)
+    if(log_level > 1)
         return;
 
     //! Print summary.

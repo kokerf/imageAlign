@@ -1,4 +1,5 @@
 #include <iostream>
+#include <fstream>
 #include <opencv2/opencv.hpp>
 
 #include "visionkit.hpp"
@@ -11,28 +12,29 @@ int main(int argc, char const *argv[])
 {
     //! Choose the type of algorithm
     int type = 0;
+    std::string typeStr;
     if(argc <=1)
     {
-        std::cout << "Usage: ./test_imageAlign algorithm_name (algorithm_name: additive, composit, invadditive, invcomposit)" << std::endl;
+        std::cout << "Usage: ./test_imageAlign algorithm_name (algorithm_name: FAIA, FCIA, IAIA, ICIA)" << std::endl;
         return 0;
     }
     else
     {
-        std::string typeStr = argv[1];
-        if(typeStr == "additive"){
+        typeStr = argv[1];
+        if(typeStr == "FAIA"){
             type = 1;
         }
-        else if(typeStr == "composit"){
+        else if(typeStr == "FCIA"){
             type = 2;
         }
-        else if(typeStr == "invadditive"){
+        else if(typeStr == "IAIA"){
             type = 3;
         }
-        else if(typeStr == "invcomposit"){
+        else if(typeStr == "ICIA"){
             type = 4;
         }
         else{
-            std::cout<<"No such algorithm_name:"<<typeStr<<"\nPlease choose: additive, composit, invadditive, invcomposit"<<std::endl;
+            std::cout<<"No such algorithm_name:"<<typeStr<<"\nPlease choose: FAIA, FCIA, IAIA, ICIA"<<std::endl;
             return 0;
         }
     }
@@ -87,12 +89,14 @@ int main(int argc, char const *argv[])
 
     cv::Mat A_estimate;
 
+    std::list<std::string> logs;
+
     switch(type)
     {
-        case 1: forwardAdditiveImageAlign(T, I, omega, A_estimate, true); break;      //! Forward Additive Image Alignment Algorithm
-        case 2: forwardCompositionalImageAlign(T, I, omega, A_estimate, true); break; //! Forward Compositional Image Alignment Algorithm
-        case 3: inverseAdditiveImageAlign(T, I, omega, A_estimate, true); break;      //! Inverse Additive Image Alignment Algorithm
-        case 4: inverseCompositionalImageAlign(T, I, omega, A_estimate, true); break; //! Inverse Compositional Image Alignment Algorithm
+        case 1: forwardAdditiveImageAlign(T, I, omega, A_estimate, 1, &logs); break;      //! Forward Additive Image Alignment Algorithm
+        case 2: forwardCompositionalImageAlign(T, I, omega, A_estimate, 1, &logs); break; //! Forward Compositional Image Alignment Algorithm
+        case 3: inverseAdditiveImageAlign(T, I, omega, A_estimate, 1, &logs); break;      //! Inverse Additive Image Alignment Algorithm
+        case 4: inverseCompositionalImageAlign(T, I, omega, A_estimate, 1, &logs); break; //! Inverse Compositional Image Alignment Algorithm
         default: break;
     }
 
@@ -101,6 +105,10 @@ int main(int argc, char const *argv[])
     cv::imshow("warp back", IW);
 
     cv::waitKey(0);
+
+    std::ofstream fout(typeStr+".txt");
+    std::for_each(logs.begin(), logs.end(), [&](const std::string &s){fout << s << std::endl;});
+    fout.close();
 
     return 0;
 }
