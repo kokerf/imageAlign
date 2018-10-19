@@ -22,7 +22,7 @@ In the root directory of the image alignment demo, run the following comments:
 	$ cmake ..
 	$ make
 
-After building, there will be an executable files in `/bin`, that we can just run as follows. The `algorithm_name` can be `additive`, `composit`, `invadditive` or `invcomposit`.
+After building, there will be an executable files in `/bin`, that we can just run as follows. The `algorithm_name` can be `FAIA`, `FCIA`, `IAIA` or `ICIA`.
 
 	../bin/test_imageAlign algorithm_name
 
